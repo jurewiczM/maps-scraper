@@ -1,21 +1,13 @@
-from argparse import Action
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.expected_conditions import presence_of_element_located
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.action_chains import ActionChains
-import time 
-import string
-import openpyxl
-import os
 import csv
-import re
+import time
 
+import openpyxl
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
 
-
+#opening driver
 driver = webdriver.Firefox()
 wait = WebDriverWait(driver,5)
 
@@ -23,7 +15,7 @@ wait = WebDriverWait(driver,5)
 driver.get('http://www.google.com/maps')
 #driver.maximize_window()
 
-
+#Accepting cookies etc.
 widget=driver.find_element_by_class_name("VfPpkd-LgbsSe")
 button=driver.find_element_by_xpath('/html/body/c-wiz/div/div/div/div[2]/div[1]/div[4]/div[1]/div/button')
 button.click()
@@ -38,7 +30,7 @@ button.click()
 button=driver.find_element_by_xpath("/html/body/c-wiz/div/div/div/div[2]/form/div/button")
 button.click()
 
-#Finding the search box 
+#Fiding search box and entering point of interest
 searchbox=driver.find_element_by_id('searchboxinput')
 location= "Wielkopolskie"
 searchbox.send_keys(location)
@@ -51,30 +43,51 @@ searchbox.send_keys("domy modulowe")
 searchbox.send_keys(Keys.ENTER)
 time.sleep(3)
 
-driver.execute_script("function sleep(ms) {  return new Promise(resolve => setTimeout(resolve, ms));} var x = document.getElementsByClassName('siAUzd-neVct section-scrollbox cYB2Ge-oHo7ed cYB2Ge-ti6hGc siAUzd-neVct-Q3DXx-BvBYQ'); var y = x[1]; y.setAttribute('class','siAUzd-neVct section-scrollbox cYB2Ge-oHo7ed cYB2Ge-ti6hGc siAUzd-neVct-Q3DXx-BvBYQ siAUzd-neVct-YbohUe-bnBfGc'); y.setAttribute('id','essa'); var z = document.getElementById('essa'); z.scrollTop=z.scrollHeight;sleep(20);z.scrollTop=z.scrollHeight")
-time.sleep(2)
-driver.execute_script("var z = document.getElementById('essa'); z.scrollTop=z.scrollHeight;")
-time.sleep(2)
-
-#entries = driver.find_elements_by_class_name('a4gq8e-aVTXAb-haAclf-jRmmHf-hSRGPd')
-
-wb= openpyxl.load_workbook("C:/Users/MAXJ/Documents/Python/Web scraper- google maps/modulowe.xlsx")
+#opening files to save later
+wb= openpyxl.load_workbook("load workbook, need better place to save it not locally, maybe google spreadsheet")
 sheetname=wb.get_sheet_names()[0]
-print(sheetname)
+#print(sheetname)
 sheet=wb[sheetname]
 sheet.title ="modulowe"
 
 f = open("firmy.csv",'w')
 writer = csv.writer(f)    
 
-href=[]
-
-href =driver.find_elements_by_class_name("a4gq8e-aVTXAb-haAclf-jRmmHf-hSRGPd")
-#print(href)
-dummy = 0
+#Getting all possible links from the search
 links = []
-for entry in href:
-    links.append(entry.get_attribute("href"))
+isNextButtonOk = 1
+
+while(isNextButtonOk==1):
+
+    #expanding search results -- normally the search are only loaded partially, this one trick is helpfull to load eveyr single result on page
+    driver.execute_script("function sleep(ms) {  return new Promise(resolve => setTimeout(resolve, ms));} var x = document.getElementsByClassName('siAUzd-neVct section-scrollbox cYB2Ge-oHo7ed cYB2Ge-ti6hGc siAUzd-neVct-Q3DXx-BvBYQ'); var y = x[1]; y.setAttribute('class','siAUzd-neVct section-scrollbox cYB2Ge-oHo7ed cYB2Ge-ti6hGc siAUzd-neVct-Q3DXx-BvBYQ siAUzd-neVct-YbohUe-bnBfGc'); y.setAttribute('id','essa'); var z = document.getElementById('essa'); z.scrollTop=z.scrollHeight;sleep(20);z.scrollTop=z.scrollHeight")
+    time.sleep(2)
+    driver.execute_script("var z = document.getElementById('essa'); z.scrollTop=z.scrollHeight;")
+    time.sleep(2)
+
+    #entries = driver.find_elements_by_class_name('a4gq8e-aVTXAb-haAclf-jRmmHf-hSRGPd')
+
+    
+
+    href=[]
+
+
+    href =driver.find_elements_by_class_name("a4gq8e-aVTXAb-haAclf-jRmmHf-hSRGPd")
+    #print(href)
+    dummy = 0
+    
+    for entry in href:
+        links.append(entry.get_attribute("href"))
+
+    if(driver.find_element_by_xpath("/html/body/div[3]/div[9]/div[8]/div/div[1]/div/div/div[2]/div[2]/div/div[1]/div/button[2]").get_attribute("disabled") == "true"):
+        isNextButtonOk = 0
+    else:
+        driver.find_element_by_xpath("/html/body/div[3]/div[9]/div[8]/div/div[1]/div/div/div[2]/div[2]/div/div[1]/div/button[2]").click()
+    
+
+
+
+#getting particular data and sending it to the spreadsheet/csv file - to decide and code correctly, for now it's just a formal thing to check if data is correctly taken from page
 
 for entry in links:
     print(entry)
@@ -90,9 +103,9 @@ for entry in links:
     print(data)
 
     for smallData in data:
-        Essa = smallData.text
+        dataText = smallData.text
         try:
-           sheet.append([name,Essa])
+           sheet.append([name,dataText])
            row = ("{},{},{}").format(name,data)
            print(row)
            writer.writerow(row)
